@@ -69,6 +69,7 @@ jobs:
             -backend-config="storage_account_name=${{ vars.TFSTATE_STORAGE_ACCOUNT }}" \
             -backend-config="container_name=${{ vars.TFSTATE_CONTAINER }}" \
             -backend-config="key=${{ vars.TFSTATE_KEY_STAGING }}"
+
       - name: Terraform apply (staging) - infra bootstrap (public image)
         working-directory: iac
         run: |
@@ -77,6 +78,7 @@ jobs:
             -var="suffix=${{ env.SUFFIX }}" \
             -var="environment=staging" \
             -var="image_tag=bootstrap"
+
       - name: ACR login server (terraform output)
         working-directory: iac
         run: echo "ACR_LOGIN_SERVER=$(terraform output -raw acr_login_server)" >> $GITHUB_ENV
@@ -84,10 +86,12 @@ jobs:
       - name: Docker login to ACR
         run: |
           az acr login --name "${ACR_LOGIN_SERVER%%.*}"
+
       - name: Build & push Docker image to ACR
         run: |
           docker build -t "${ACR_LOGIN_SERVER}/hola:${IMAGE_TAG}" .
           docker push "${ACR_LOGIN_SERVER}/hola:${IMAGE_TAG}"
+
       - name: Terraform apply (staging) - switch app to pushed image
         working-directory: iac
         run: |
@@ -96,12 +100,14 @@ jobs:
             -var="suffix=${{ env.SUFFIX }}" \
             -var="environment=staging" \
             -var="image_tag=${{ env.IMAGE_TAG }}"
+
       - name: Smoke test (staging)
         working-directory: iac
         run: |
           APP_URL=$(terraform output -raw app_url)
           echo "Testing $APP_URL"
           curl -fsS "$APP_URL" | head -n 20
+
   deploy_production:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build_test
@@ -142,6 +148,7 @@ jobs:
             -backend-config="storage_account_name=${{ vars.TFSTATE_STORAGE_ACCOUNT }}" \
             -backend-config="container_name=${{ vars.TFSTATE_CONTAINER }}" \
             -backend-config="key=${{ vars.TFSTATE_KEY_PRODUCTION }}"
+
       - name: Terraform apply (production) - infra bootstrap (public image)
         working-directory: iac
         run: |
@@ -150,6 +157,7 @@ jobs:
             -var="suffix=${{ env.SUFFIX }}" \
             -var="environment=production" \
             -var="image_tag=bootstrap"
+
       - name: ACR login server (terraform output)
         working-directory: iac
         run: echo "ACR_LOGIN_SERVER=$(terraform output -raw acr_login_server)" >> $GITHUB_ENV
@@ -157,10 +165,12 @@ jobs:
       - name: Docker login to ACR
         run: |
           az acr login --name "${ACR_LOGIN_SERVER%%.*}"
+
       - name: Build & push Docker image to ACR (prod tag)
         run: |
           docker build -t "${ACR_LOGIN_SERVER}/hola:${IMAGE_TAG}" .
           docker push "${ACR_LOGIN_SERVER}/hola:${IMAGE_TAG}"
+
       - name: Terraform apply (production) - switch app to pushed image
         working-directory: iac
         run: |
@@ -169,6 +179,7 @@ jobs:
             -var="suffix=${{ env.SUFFIX }}" \
             -var="environment=production" \
             -var="image_tag=${{ env.IMAGE_TAG }}"
+
       - name: Smoke test (production)
         working-directory: iac
         run: |
